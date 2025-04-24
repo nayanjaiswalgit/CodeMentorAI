@@ -5,17 +5,14 @@ import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SearchAndFilters from "@/components/common/SearchAndFilters";
+import ResourceTabs from "@/components/common/ResourceTabs";
+import EmptyState from "@/components/common/EmptyState";
+import LoadingSkeleton from "@/components/common/LoadingSkeleton";
+import { getUniqueValues, capitalize } from "@/lib/resourceUtils";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Search } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import type { Course } from "@shared/schema";
 
 export default function Courses() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,9 +51,9 @@ export default function Courses() {
     return Math.round((completedCount / totalLessons) * 100);
   };
 
-  // Filter courses based on search query and selected filters
-  const filterCourses = (courses = []) => {
-    return courses.filter(course => {
+  // Typed filter function
+  const filterCourses = (courses: Course[] = []): Course[] => {
+    return courses.filter((course) => {
       // Search filter
       const matchesSearch = searchQuery === "" || 
         course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -74,31 +71,18 @@ export default function Courses() {
     });
   };
 
-  // Get in-progress courses
-  const getInProgressCourses = () => {
-    if (!courses || !userProgress) return [];
-    
-    // Find courses with any progress
-    return courses.filter(course => {
-      const hasProgress = userProgress.some(p => 
-        p.courseId === course.id && p.lessonId && p.completed
-      );
-      
-      // Only include if there's progress but not completed
+  // Typed progress helpers
+  const getInProgressCourses = (): Course[] => {
+    if (!courses) return [];
+    return courses.filter((course) => {
       const progress = getCourseProgress(course.id);
-      return hasProgress && progress < 100;
+      return progress > 0 && progress < 100;
     });
   };
 
-  // Get completed courses
-  const getCompletedCourses = () => {
-    if (!courses || !userProgress) return [];
-    
-    // Find courses with 100% progress
-    return courses.filter(course => {
-      const progress = getCourseProgress(course.id);
-      return progress === 100;
-    });
+  const getCompletedCourses = (): Course[] => {
+    if (!courses) return [];
+    return courses.filter((course) => getCourseProgress(course.id) === 100);
   };
 
   // Get languages from available courses
@@ -115,17 +99,189 @@ export default function Courses() {
     return Array.from(levels);
   };
 
+  const languageOptions = [
+    { value: "all", label: "All Languages" },
+    ...getUniqueValues(courses || [], "language").map(l => ({ value: l, label: capitalize(l) })),
+  ];
+
+  // Fix: Ensure difficultyOptions is always an array of correct type
+  const difficultyOptions = [
+    { value: "all", label: "All Levels" },
+    ...Array.isArray(courses)
+      ? getUniqueValues(courses, "difficulty").map((d: string) => ({ value: d, label: capitalize(d) }))
+      : [],
+  ];
+
+  // Tabs config
+  const tabs = [
+    {
+      value: "all",
+      label: "All Courses",
+      render: () =>
+        filterCourses(Array.isArray(courses) ? courses : []).length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filterCourses(Array.isArray(courses) ? courses : []).map(course => {
+              const progress = getCourseProgress(course.id);
+              return (
+                <Card key={course.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="w-12 h-12 rounded-full bg-primary bg-opacity-20 flex items-center justify-center mr-4">
+                        {course.language === "javascript" && <i className="fab fa-js text-xl text-primary"></i>}
+                        {course.language === "python" && <i className="fab fa-python text-xl text-primary"></i>}
+                        {course.language === "cpp" && <i className="fas fa-code text-xl text-primary"></i>}
+                      </div>
+                      <div>
+                        <div className="flex items-center">
+                          <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full mr-2">
+                            {capitalize(course.language)}
+                          </span>
+                          <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full">
+                            {capitalize(course.difficulty)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">{course.title}</h3>
+                    <p className="text-sm text-neutral-600 mb-4 line-clamp-2">{course.description}</p>
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>{progress > 0 ? 'In Progress' : 'Not Started'}</span>
+                        <span className="font-medium">{progress}%</span>
+                      </div>
+                      <Progress value={progress} />
+                    </div>
+                    <Button asChild className="w-full">
+                      <Link href={`/courses/${course.id}`}>
+                        <a>{progress > 0 ? 'Continue' : 'Start Course'}</a>
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : null,
+      empty: {
+        icon: <i className="fas fa-book-open text-2xl"></i>,
+        title: "No courses found",
+        message: "No courses match your current filters",
+      },
+    },
+    {
+      value: "in-progress",
+      label: "In Progress",
+      render: () =>
+        filterCourses(Array.isArray(getInProgressCourses()) ? getInProgressCourses() : []).length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filterCourses(Array.isArray(getInProgressCourses()) ? getInProgressCourses() : []).map(course => {
+              const progress = getCourseProgress(course.id);
+              return (
+                <Card key={course.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="w-12 h-12 rounded-full bg-primary bg-opacity-20 flex items-center justify-center mr-4">
+                        {course.language === "javascript" && <i className="fab fa-js text-xl text-primary"></i>}
+                        {course.language === "python" && <i className="fab fa-python text-xl text-primary"></i>}
+                        {course.language === "cpp" && <i className="fas fa-code text-xl text-primary"></i>}
+                      </div>
+                      <div>
+                        <div className="flex items-center">
+                          <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full mr-2">
+                            {capitalize(course.language)}
+                          </span>
+                          <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full">
+                            {capitalize(course.difficulty)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">{course.title}</h3>
+                    <p className="text-sm text-neutral-600 mb-4 line-clamp-2">{course.description}</p>
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>In Progress</span>
+                        <span className="font-medium">{progress}%</span>
+                      </div>
+                      <Progress value={progress} />
+                    </div>
+                    <Button asChild className="w-full">
+                      <Link href={`/courses/${course.id}`}>
+                        <a>Continue</a>
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : null,
+      empty: {
+        icon: <i className="fas fa-book-open text-2xl"></i>,
+        title: "No courses in progress",
+        message: "Start a course to see it here",
+      },
+    },
+    {
+      value: "completed",
+      label: "Completed",
+      render: () =>
+        filterCourses(Array.isArray(getCompletedCourses()) ? getCompletedCourses() : []).length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filterCourses(Array.isArray(getCompletedCourses()) ? getCompletedCourses() : []).map(course => (
+              <Card key={course.id}>
+                <CardContent className="p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mr-4">
+                      <i className="fas fa-check-circle text-xl"></i>
+                    </div>
+                    <div>
+                      <div className="flex items-center">
+                        <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full mr-2">
+                          {capitalize(course.language)}
+                        </span>
+                        <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full">
+                          {capitalize(course.difficulty)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">{course.title}</h3>
+                  <p className="text-sm text-neutral-600 mb-4 line-clamp-2">{course.description}</p>
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-green-600 font-medium">Completed</span>
+                      <span className="font-medium">100%</span>
+                    </div>
+                    <Progress value={100} className="bg-green-100" />
+                  </div>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href={`/courses/${course.id}`}>
+                      <a>Review Course</a>
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : null,
+      empty: {
+        icon: <i className="fas fa-graduation-cap text-2xl"></i>,
+        title: "No completed courses",
+        message: "Complete a course to see it here",
+      },
+    },
+  ];
+
   const isLoading = isLoadingCourses || isLoadingProgress;
 
   return (
     <div className="bg-neutral-50 font-sans text-neutral-800 flex h-screen overflow-hidden">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
-        
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-neutral-50 p-4 md:p-6">
           <div className="mb-6">
@@ -134,262 +290,34 @@ export default function Courses() {
               Browse our courses and continue your learning journey
             </p>
           </div>
-          
           {/* Search and Filters */}
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-400" />
-              <Input
-                placeholder="Search courses..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Languages</SelectItem>
-                {getAvailableLanguages().map(language => (
-                  <SelectItem key={language} value={language}>
-                    {language.charAt(0).toUpperCase() + language.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                {getDifficultyLevels().map(level => (
-                  <SelectItem key={level} value={level}>
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Course Tabs */}
-          <Tabs defaultValue="all" className="mb-8">
-            <TabsList>
-              <TabsTrigger value="all">All Courses</TabsTrigger>
-              <TabsTrigger value="in-progress">In Progress</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-            </TabsList>
-            
-            {/* All Courses Tab */}
-            <TabsContent value="all" className="mt-4">
-              {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[1, 2, 3, 4, 5, 6].map(i => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-6">
-                        <div className="w-12 h-12 bg-neutral-200 rounded-full mb-4"></div>
-                        <div className="h-6 bg-neutral-200 rounded mb-2 w-3/4"></div>
-                        <div className="h-4 bg-neutral-200 rounded mb-1 w-full"></div>
-                        <div className="h-4 bg-neutral-200 rounded mb-4 w-2/3"></div>
-                        <div className="h-8 bg-neutral-200 rounded w-1/3 ml-auto"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : courses?.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filterCourses(courses).map(course => {
-                    const progress = getCourseProgress(course.id);
-                    return (
-                      <Card key={course.id}>
-                        <CardContent className="p-6">
-                          <div className="flex items-center mb-4">
-                            <div className="w-12 h-12 rounded-full bg-primary bg-opacity-20 flex items-center justify-center mr-4">
-                              {course.language === "javascript" && <i className="fab fa-js text-xl text-primary"></i>}
-                              {course.language === "python" && <i className="fab fa-python text-xl text-primary"></i>}
-                              {course.language === "cpp" && <i className="fas fa-code text-xl text-primary"></i>}
-                            </div>
-                            <div>
-                              <div className="flex items-center">
-                                <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full mr-2">
-                                  {course.language.charAt(0).toUpperCase() + course.language.slice(1)}
-                                </span>
-                                <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full">
-                                  {course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <h3 className="text-lg font-medium mb-2">{course.title}</h3>
-                          <p className="text-sm text-neutral-600 mb-4 line-clamp-2">
-                            {course.description}
-                          </p>
-                          
-                          <div className="mb-4">
-                            <div className="flex justify-between text-sm mb-1">
-                              <span>{progress > 0 ? 'In Progress' : 'Not Started'}</span>
-                              <span className="font-medium">{progress}%</span>
-                            </div>
-                            <Progress value={progress} />
-                          </div>
-                          
-                          <Button asChild className="w-full">
-                            <Link href={`/courses/${course.id}`}>
-                              <a>{progress > 0 ? 'Continue' : 'Start Course'}</a>
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-neutral-100 text-neutral-500 mb-4">
-                    <i className="fas fa-book-open text-2xl"></i>
-                  </div>
-                  <h3 className="text-lg font-medium">No courses found</h3>
-                  <p className="text-neutral-600">
-                    No courses match your current filters
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-            
-            {/* In Progress Tab */}
-            <TabsContent value="in-progress" className="mt-4">
-              {isLoading ? (
-                <div className="flex justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : getInProgressCourses().length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filterCourses(getInProgressCourses()).map(course => {
-                    const progress = getCourseProgress(course.id);
-                    return (
-                      <Card key={course.id}>
-                        <CardContent className="p-6">
-                          <div className="flex items-center mb-4">
-                            <div className="w-12 h-12 rounded-full bg-primary bg-opacity-20 flex items-center justify-center mr-4">
-                              {course.language === "javascript" && <i className="fab fa-js text-xl text-primary"></i>}
-                              {course.language === "python" && <i className="fab fa-python text-xl text-primary"></i>}
-                              {course.language === "cpp" && <i className="fas fa-code text-xl text-primary"></i>}
-                            </div>
-                            <div>
-                              <div className="flex items-center">
-                                <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full mr-2">
-                                  {course.language.charAt(0).toUpperCase() + course.language.slice(1)}
-                                </span>
-                                <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full">
-                                  {course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <h3 className="text-lg font-medium mb-2">{course.title}</h3>
-                          <p className="text-sm text-neutral-600 mb-4 line-clamp-2">
-                            {course.description}
-                          </p>
-                          
-                          <div className="mb-4">
-                            <div className="flex justify-between text-sm mb-1">
-                              <span>In Progress</span>
-                              <span className="font-medium">{progress}%</span>
-                            </div>
-                            <Progress value={progress} />
-                          </div>
-                          
-                          <Button asChild className="w-full">
-                            <Link href={`/courses/${course.id}`}>
-                              <a>Continue</a>
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-neutral-100 text-neutral-500 mb-4">
-                    <i className="fas fa-book-open text-2xl"></i>
-                  </div>
-                  <h3 className="text-lg font-medium">No courses in progress</h3>
-                  <p className="text-neutral-600">
-                    Start a course to see it here
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-            
-            {/* Completed Tab */}
-            <TabsContent value="completed" className="mt-4">
-              {isLoading ? (
-                <div className="flex justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : getCompletedCourses().length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filterCourses(getCompletedCourses()).map(course => (
-                    <Card key={course.id}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center mb-4">
-                          <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mr-4">
-                            <i className="fas fa-check-circle text-xl"></i>
-                          </div>
-                          <div>
-                            <div className="flex items-center">
-                              <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full mr-2">
-                                {course.language.charAt(0).toUpperCase() + course.language.slice(1)}
-                              </span>
-                              <span className="text-xs font-medium bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full">
-                                {course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <h3 className="text-lg font-medium mb-2">{course.title}</h3>
-                        <p className="text-sm text-neutral-600 mb-4 line-clamp-2">
-                          {course.description}
-                        </p>
-                        
-                        <div className="mb-4">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="text-green-600 font-medium">Completed</span>
-                            <span className="font-medium">100%</span>
-                          </div>
-                          <Progress value={100} className="bg-green-100" />
-                        </div>
-                        
-                        <Button asChild variant="outline" className="w-full">
-                          <Link href={`/courses/${course.id}`}>
-                            <a>Review Course</a>
-                          </Link>
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-neutral-100 text-neutral-500 mb-4">
-                    <i className="fas fa-graduation-cap text-2xl"></i>
-                  </div>
-                  <h3 className="text-lg font-medium">No completed courses</h3>
-                  <p className="text-neutral-600">
-                    Complete a course to see it here
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          <SearchAndFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            filters={[
+              {
+                label: "Language",
+                value: selectedLanguage,
+                onChange: setSelectedLanguage,
+                options: languageOptions,
+                placeholder: "Filter by language",
+              },
+              {
+                label: "Level",
+                value: selectedLevel,
+                onChange: setSelectedLevel,
+                options: difficultyOptions,
+                placeholder: "Filter by level",
+              },
+            ]}
+            className="mb-6"
+          />
+          {/* Tabs for All/In Progress/Completed */}
+          <ResourceTabs
+            tabs={tabs}
+            defaultValue="all"
+            isLoading={isLoading}
+          />
         </main>
       </div>
     </div>
