@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/auth/login";
 import Signup from "@/pages/auth/signup";
@@ -15,161 +16,124 @@ import CreateTest from "@/pages/tests/create";
 import TestDetail from "@/pages/tests/[testId]";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-
-function AuthenticatedRoute({
-  component: Component,
-  ...rest
-}: {
-  component: React.ComponentType<any>;
-  [key: string]: any;
-}) {
-  const { isLoading, data: user } = useQuery({
-    queryKey: ["/api/auth/me"],
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-  if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    // Redirect to login
-    window.location.href = "/login";
-    return null;
-  }
-
-  return <Component {...rest} />;
-}
-
-function UnauthenticatedRoute({
-  component: Component,
-  ...rest
-}: {
-  component: React.ComponentType<any>;
-  [key: string]: any;
-}) {
-  const { isLoading, data: user } = useQuery({
-    queryKey: ["/api/auth/me"],
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (user) {
-    // Redirect to dashboard
-    window.location.href = "/";
-    return null;
-  }
-
-  return <Component {...rest} />;
-}
-
 import LearningPathsIndex from "@/pages/learning-paths/index";
 import LearningPathsCreate from "@/pages/learning-paths/create";
 import LearningPathsDetail from "@/pages/learning-paths/pathId";
 
+interface RouteWrapperProps {
+  children: React.ReactNode;
+}
+
+function AuthenticatedRouteWrapper({ children }: RouteWrapperProps) {
+  const { isLoading, data: user } = useQuery({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/login");
+    }
+  }, [isLoading, user, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center" role="status" aria-busy="true">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading..." />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+  return <>{children}</>;
+}
+
+function UnauthenticatedRouteWrapper({ children }: RouteWrapperProps) {
+  const { isLoading, data: user } = useQuery({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      setLocation("/");
+    }
+  }, [isLoading, user, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center" role="status" aria-busy="true">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading..." />
+      </div>
+    );
+  }
+
+  if (user) return null;
+  return <>{children}</>;
+}
+
+// Route config and wrapper helpers for DRY code
+
+interface AppRoute {
+  path?: string;
+  component: React.ComponentType<any>;
+  auth?: 'authenticated' | 'unauthenticated' | 'none';
+  exact?: boolean;
+}
+
+const appRoutes: AppRoute[] = [
+  { path: '/', component: Dashboard, auth: 'authenticated' },
+  { path: '/onboarding', component: Onboarding, auth: 'authenticated' },
+  { path: '/courses', component: Courses, auth: 'authenticated' },
+  { path: '/courses/:courseId', component: CourseDetail, auth: 'authenticated' },
+  { path: '/challenges', component: Challenges, auth: 'authenticated' },
+  { path: '/challenges/:challengeId', component: ChallengeDetail, auth: 'authenticated' },
+  { path: '/mcq', component: McqQuizzes, auth: 'authenticated' },
+  { path: '/tests', component: Tests, auth: 'authenticated' },
+  { path: '/tests/create', component: CreateTest, auth: 'authenticated' },
+  { path: '/tests/:testId', component: TestDetail, auth: 'authenticated' },
+  { path: '/learning-paths', component: LearningPathsIndex, auth: 'authenticated' },
+  { path: '/learning-paths/create', component: LearningPathsCreate, auth: 'authenticated' },
+  { path: '/learning-paths/:pathId', component: LearningPathsDetail, auth: 'authenticated' },
+  { path: '/profile', component: Profile, auth: 'authenticated' },
+  { path: '/login', component: Login, auth: 'unauthenticated' },
+  { path: '/signup', component: Signup, auth: 'unauthenticated' },
+  // 404 fallback handled below
+];
+
+function RouteWithAuth({ route, params }: { route: AppRoute; params?: any }) {
+  if (route.auth === 'authenticated') {
+    return (
+      <AuthenticatedRouteWrapper>
+        <route.component {...params} />
+      </AuthenticatedRouteWrapper>
+    );
+  }
+  if (route.auth === 'unauthenticated') {
+    return (
+      <UnauthenticatedRouteWrapper>
+        <route.component {...params} />
+      </UnauthenticatedRouteWrapper>
+    );
+  }
+  return <route.component {...params} />;
+}
+
 function App() {
   return (
     <Switch>
-      <Route
-        path="/"
-        component={() => <AuthenticatedRoute component={Dashboard} />}
-      />
-
-      {/* Auth routes */}
-      <Route
-        path="/login"
-        component={() => <UnauthenticatedRoute component={Login} />}
-      />
-      <Route
-        path="/signup"
-        component={() => <UnauthenticatedRoute component={Signup} />}
-      />
-      <Route
-        path="/onboarding"
-        component={() => <AuthenticatedRoute component={Onboarding} />}
-      />
-
-      {/* Course routes */}
-      <Route
-        path="/courses"
-        component={() => <AuthenticatedRoute component={Courses} />}
-      />
-      <Route
-        path="/courses/:courseId"
-        component={(params) => (
-          <AuthenticatedRoute component={CourseDetail} params={params} />
-        )}
-      />
-
-      {/* Challenge routes */}
-      <Route
-        path="/challenges"
-        component={() => <AuthenticatedRoute component={Challenges} />}
-      />
-      <Route
-        path="/challenges/:challengeId"
-        component={(params) => (
-          <AuthenticatedRoute component={ChallengeDetail} params={params} />
-        )}
-      />
-
-      {/* MCQ Quiz routes */}
-      <Route
-        path="/mcq"
-        component={() => <AuthenticatedRoute component={McqQuizzes} />}
-      />
-
-      {/* Test routes */}
-      <Route
-        path="/tests"
-        component={() => <AuthenticatedRoute component={Tests} />}
-      />
-      <Route
-        path="/tests/create"
-        component={() => <AuthenticatedRoute component={CreateTest} />}
-      />
-      <Route
-        path="/tests/:testId"
-        component={(params) => (
-          <AuthenticatedRoute component={TestDetail} params={params} />
-        )}
-      />
-
-      {/* Learning Paths routes */}
-      <Route
-        path="/learning-paths"
-        component={() => <AuthenticatedRoute component={LearningPathsIndex} />}
-      />
-      <Route
-        path="/learning-paths/create"
-        component={() => <AuthenticatedRoute component={LearningPathsCreate} />}
-      />
-      <Route
-        path="/learning-paths/:pathId"
-        component={(params) => (
-          <AuthenticatedRoute component={LearningPathsDetail} params={params} />
-        )}
-      />
-
-      {/* Profile route */}
-      <Route
-        path="/profile"
-        component={() => <AuthenticatedRoute component={Profile} />}
-      />
-
-      {/* Fallback to 404 */}
+      {appRoutes.map(route => (
+        <Route
+          key={route.path || 'notfound'}
+          path={route.path}
+          component={params => <RouteWithAuth route={route} params={params} />}
+        />
+      ))}
+      {/* 404 fallback */}
       <Route component={NotFound} />
     </Switch>
   );

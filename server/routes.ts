@@ -479,6 +479,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // --- AI-generated test questions endpoint ---
+  app.post("/api/generate-questions", isAuthenticated, async (req, res) => {
+    try {
+      const { topic, difficulty, language, numQuestions } = req.body;
+      const { generateTestQuestions } = await import("./services/aiService");
+      const result = await generateTestQuestions({ topic, difficulty, language, numQuestions });
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating questions:", error);
+      res.status(500).json({ message: "Error generating questions" });
+    }
+  });
+
+  // --- AI-generated test questions from PDF endpoint ---
+  const multer = (await import('multer')).default;
+  const upload = multer({ dest: 'uploads/' });
+  app.post("/api/generate-questions-from-pdf", isAuthenticated, upload.single('pdf'), async (req, res) => {
+    try {
+      const { pageStart, pageEnd, keyword, numQuestions, difficulty, language } = req.body;
+      const filePath = req.file?.path;
+      if (!filePath) return res.status(400).json({ message: "No PDF uploaded" });
+      const { extractTextFromPdf } = await import("./services/pdfQuestionService");
+      let text = await extractTextFromPdf(filePath, {
+        pageRange: pageStart && pageEnd ? [parseInt(pageStart), parseInt(pageEnd)] : undefined,
+        keyword: keyword || undefined
+      });
+      if (!text || text.length < 50) return res.status(400).json({ message: "Could not extract enough text from PDF" });
+      const { generateTestQuestions } = await import("./services/aiService");
+      const result = await generateTestQuestions({ topic: text, difficulty, language, numQuestions });
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating questions from PDF:", error);
+      res.status(500).json({ message: "Error generating questions from PDF" });
+    }
+  });
+
   // ======== Test Routes ========
   app.get("/api/tests", async (req, res) => {
     try {

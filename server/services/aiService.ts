@@ -165,6 +165,48 @@ export async function getPersonalizedRecommendations(
   }
 }
 
+/**
+ * Generate test questions using AI
+ */
+export async function generateTestQuestions({ topic, difficulty, language, numQuestions }: {
+  topic: string;
+  difficulty?: string;
+  language?: string;
+  numQuestions?: number;
+}): Promise<{ questions: { question: string; options?: string[]; answer?: string; explanation?: string }[] }> {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      // Return mock questions for development
+      return {
+        questions: [
+          { question: `Sample question about ${topic}?`, options: ["A", "B", "C", "D"], answer: "A", explanation: "This is a mock answer." },
+          { question: `Another sample question on ${topic}?`, options: ["A", "B", "C", "D"], answer: "B", explanation: "This is a mock answer." }
+        ]
+      };
+    }
+    const prompt = `Generate ${numQuestions || 5} ${difficulty ? difficulty + ' ' : ''}${language ? language + ' ' : ''}multiple-choice questions on the topic '${topic}'.
+Return each question as a JSON object with 'question', 'options' (array), 'answer' (correct option), and 'explanation'. Return a JSON array.`;
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" }
+    });
+    let questions;
+    try {
+      questions = JSON.parse(response.choices[0].message.content);
+      if (!Array.isArray(questions)) {
+        questions = questions.questions || [];
+      }
+    } catch (e) {
+      questions = [];
+    }
+    return { questions };
+  } catch (error) {
+    console.error("Error generating test questions:", error);
+    return { questions: [] };
+  }
+}
+
 // Development mock responses
 
 function getMockFeedback(language: string, code: string): {
