@@ -32,6 +32,8 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout", {});
+      // Remove token from localStorage
+      localStorage.removeItem("authToken");
       // Invalidate the user query
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       // Redirect to login

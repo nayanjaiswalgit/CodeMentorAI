@@ -32,6 +32,12 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  if (res.status === 401) {
+    // Remove invalid token
+    localStorage.removeItem("authToken");
+    // Optionally, trigger redirect or toast here
+  }
+
   await throwIfResNotOk(res);
   // Try to parse JSON, fallback to text
   const contentType = res.headers.get("content-type");

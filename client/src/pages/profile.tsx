@@ -34,15 +34,13 @@ export default function Profile() {
     setIsLoggingOut(true);
     try {
       await apiRequest("POST", "/api/auth/logout", {});
-      // Invalidate user query
+      // Remove token from localStorage
+      localStorage.removeItem("authToken");
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
-      
+      window.location.href = "/login";
       toast({
         title: "Logged out successfully",
       });
-      
-      // Redirect to login
-      window.location.href = "/login";
     } catch (error: unknown) {
       toast({
         variant: "destructive",
