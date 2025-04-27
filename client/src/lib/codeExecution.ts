@@ -2,6 +2,7 @@ import { apiRequest } from "./queryClient";
 
 /**
  * Execute code with the given language and code string
+ * Now handled by Django REST Framework backend at /api/execute-code
  */
 export async function executeCode(language: string, code: string) {
   try {
@@ -59,8 +60,6 @@ export function parseExecutionResult(result: any) {
   return {
     success,
     output,
-    executionTime: result.executionTime || 0,
-    exitCode: result.exitCode
   };
 }
 
@@ -68,16 +67,5 @@ export function parseExecutionResult(result: any) {
  * Check if the code output matches expected output
  */
 export function checkCodeOutput(actualOutput: string, expectedOutput: string) {
-  // Normalize outputs by trimming whitespace and normalizing line endings
-  const normalizeOutput = (output: string) => {
-    return output
-      .trim()
-      .replace(/\r\n/g, '\n')
-      .replace(/\s+/g, ' ');
-  };
-  
-  const normalizedActual = normalizeOutput(actualOutput);
-  const normalizedExpected = normalizeOutput(expectedOutput);
-  
-  return normalizedActual === normalizedExpected;
+  return actualOutput.trim() === expectedOutput.trim();
 }

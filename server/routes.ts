@@ -411,6 +411,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ======== Question Bank Routes ========
+  app.get("/api/questions", isAuthenticated, async (req, res) => {
+    try {
+      const { search, type, difficulty } = req.query;
+      let questions = await storage.getQuestions();
+      // Simple filtering (expand as needed)
+      if (search) {
+        questions = questions.filter((q: any) =>
+          q.text.toLowerCase().includes((search as string).toLowerCase())
+        );
+      }
+      if (type) {
+        questions = questions.filter((q: any) => q.type === type);
+      }
+      if (difficulty) {
+        questions = questions.filter((q: any) => q.difficulty === difficulty);
+      }
+      res.json(questions);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching questions" });
+    }
+  });
+
+  app.post("/api/questions", isAuthenticated, async (req, res) => {
+    try {
+      const questionData = insertMcqSchema.parse(req.body); // Use appropriate schema for question type
+      const newQuestion = await storage.createQuestion(questionData);
+      res.status(201).json(newQuestion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid question data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Error creating question" });
+    }
+  });
+
+  app.put("/api/questions/:id", isAuthenticated, async (req, res) => {
+    try {
+      const questionId = parseInt(req.params.id);
+      const updateData = req.body;
+      const updatedQuestion = await storage.updateQuestion(questionId, updateData);
+      if (!updatedQuestion) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      res.json(updatedQuestion);
+    } catch (error) {
+      res.status(500).json({ message: "Error updating question" });
+    }
+  });
+
+  app.delete("/api/questions/:id", isAuthenticated, async (req, res) => {
+    try {
+      const questionId = parseInt(req.params.id);
+      const deleted = await storage.deleteQuestion(questionId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+      res.json({ message: "Question deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting question" });
+    }
+  });
+
   // ======== Code Execution Route ========
   app.post("/api/execute-code", async (req, res) => {
     try {

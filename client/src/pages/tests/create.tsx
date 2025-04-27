@@ -30,6 +30,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { XCircle, PlusCircle, Code, AlignLeft, Check, Trash2, Eye, MoveUp, MoveDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Editor } from "@monaco-editor/react";
+import { useQuery } from "@tanstack/react-query";
+import { UserRole, hasPermission, Permission } from "@/constants/permissions";
 
 // Question types
 type QuestionType = "mcq" | "code-mcq" | "multi-select";
@@ -503,6 +505,22 @@ export default function CreateTest() {
       });
     }
   };
+
+  // Fetch user
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: ['/api/auth/me'],
+  });
+
+  // Permission check: Only allow non-students to create tests
+  if (!userLoading && user?.role === UserRole.STUDENT) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-gray-600">
+        <i className="fas fa-lock text-4xl mb-4 text-primary" />
+        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+        <p>You do not have permission to create a test. Only instructors and admins can create course tests.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-neutral-50 font-sans text-neutral-800 flex h-screen overflow-hidden">

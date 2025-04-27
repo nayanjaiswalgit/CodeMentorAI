@@ -26,7 +26,7 @@ export async function signup(userData: {
   skillLevel: string;
 }) {
   try {
-    const response = await apiRequest("POST", "/api/auth/signup", userData);
+    const response = await apiRequest("POST", "/api/auth/register", userData);
     return response;
   } catch (error) {
     throw new Error(error.message || "Signup failed. Please try again.");

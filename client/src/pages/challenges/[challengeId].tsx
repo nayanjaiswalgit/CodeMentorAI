@@ -7,7 +7,7 @@ import CodeEditor from "@/components/learning/CodeEditor";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -115,15 +115,13 @@ export default function ChallengeDetail() {
           ) : challenge ? (
             <div>
               <div className="mb-6">
-                <Breadcrumb className="mb-2">
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="/challenges">Challenges</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href={`/challenges/${challengeId}`}>{challenge.title}</BreadcrumbLink>
-                  </BreadcrumbItem>
-                </Breadcrumb>
+                <Breadcrumbs
+                  className="mb-2"
+                  items={[
+                    { label: "Challenges", href: "/challenges" },
+                    { label: challenge.title }
+                  ]}
+                />
                 
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                   <div>

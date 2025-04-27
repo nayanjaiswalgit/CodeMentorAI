@@ -1,0 +1,93 @@
+[
+  {
+    "model": "api.course",
+    "pk": 1,
+    "fields": {
+      "title": "Full Stack Web Development",
+      "description": "Learn to build web apps with Django and React.",
+      "instructor": 1,
+      "language": "English"
+    }
+  },
+  {
+    "model": "api.course",
+    "pk": 2,
+    "fields": {
+      "title": "Python for Data Science",
+      "description": "Data science fundamentals with Python.",
+      "instructor": 1,
+      "language": "English"
+    }
+  },
+  {
+    "model": "api.module",
+    "pk": 1,
+    "fields": {
+      "course": 1,
+      "title": "Introduction to Web Dev",
+      "order": 1
+    }
+  },
+  {
+    "model": "api.lesson",
+    "pk": 1,
+    "fields": {
+      "course": 1,
+      "title": "Welcome & Setup",
+      "content": "Welcome to the course! Let's get your environment ready.",
+      "order": 1
+    }
+  },
+  {
+    "model": "api.enrollment",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "course": 1,
+      "progress": 20,
+      "completed": false
+    }
+  },
+  {
+    "model": "api.mcq",
+    "pk": 1,
+    "fields": {
+      "lesson": 1,
+      "question": "What is React?",
+      "options": ["A Python library", "A JavaScript library", "A database", "A CSS framework"],
+      "answer": "A JavaScript library"
+    }
+  },
+  {
+    "model": "api.challenge",
+    "pk": 1,
+    "fields": {
+      "lesson": 1,
+      "title": "Hello World Challenge",
+      "description": "Write a program that prints 'Hello, World!'",
+      "expected_output": "Hello, World!",
+      "test_cases": [
+        {"input": "", "output": "Hello, World!"}
+      ],
+      "order": 1
+    }
+  },
+  {
+    "model": "api.note",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "lesson": 1,
+      "content": "Remember to install Node.js!"
+    }
+  },
+  {
+    "model": "api.chatmessage",
+    "pk": 1,
+    "fields": {
+      "course": 1,
+      "user": 1,
+      "message": "Excited to start this course!"
+    }
+  }
+]

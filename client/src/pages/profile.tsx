@@ -1,29 +1,32 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { User } from "@/types/user";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { UserRole, Permission, hasPermission } from "@/constants/permissions";
 
 export default function Profile() {
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const { data: user, isLoading: isLoadingUser } = useQuery({
+  const { data: user, isLoading: isLoadingUser } = useQuery<User>({
     queryKey: ['/api/auth/me'],
   });
 
-  const { data: userProgress, isLoading: isLoadingProgress } = useQuery({
+  const { data: userProgress, isLoading: isLoadingProgress } = useQuery<any[]>({
     queryKey: ['/api/user-progress'],
   });
 
-  const { data: skills, isLoading: isLoadingSkills } = useQuery({
+  const { data: skills, isLoading: isLoadingSkills } = useQuery<Record<string, number>>({
     queryKey: ['/api/user-skills'],
   });
 
@@ -40,11 +43,11 @@ export default function Profile() {
       
       // Redirect to login
       window.location.href = "/login";
-    } catch (error) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Logout failed",
-        description: error.message || "An error occurred during logout",
+        description: error instanceof Error ? error.message : "An error occurred during logout",
       });
       setIsLoggingOut(false);
     }
@@ -54,14 +57,14 @@ export default function Profile() {
   const getLearningStats = () => {
     if (!userProgress) return { lessons: 0, challenges: 0, courses: 0 };
     
-    const completedLessons = userProgress.filter(p => p.lessonId && p.completed).length;
-    const completedChallenges = userProgress.filter(p => p.challengeId && p.completed).length;
+    const completedLessons = userProgress.filter((p: any) => p.lessonId && p.completed).length;
+    const completedChallenges = userProgress.filter((p: any) => p.challengeId && p.completed).length;
     
     // Count unique course IDs with at least one completed lesson
     const courseIds = new Set(
       userProgress
-        .filter(p => p.courseId && p.lessonId && p.completed)
-        .map(p => p.courseId)
+        .filter((p: any) => p.courseId && p.lessonId && p.completed)
+        .map((p: any) => p.courseId)
     );
     
     return {
@@ -73,6 +76,8 @@ export default function Profile() {
 
   const stats = getLearningStats();
   const isLoading = isLoadingUser || isLoadingProgress || isLoadingSkills;
+
+  const canEditProfile = user && hasPermission(user.role, Permission.EDIT_PROFILE);
 
   return (
     <div className="bg-neutral-50 font-sans text-neutral-800 flex h-screen overflow-hidden">
@@ -100,12 +105,20 @@ export default function Profile() {
                 <CardContent>
                   <div className="flex flex-col items-center mb-6">
                     <div className="w-24 h-24 rounded-full bg-primary bg-opacity-20 flex items-center justify-center text-2xl font-medium text-primary mb-3">
-                      {user.displayName.charAt(0)}
+                      {user.displayName?.charAt(0) || user.username?.charAt(0) || "U"}
                     </div>
-                    <h2 className="text-xl font-medium">{user.displayName}</h2>
+                    <h2 className="text-xl font-medium">{user.displayName || user.username}</h2>
                     <p className="text-neutral-600">@{user.username}</p>
                   </div>
-                  
+                  <div className="mb-6 flex flex-col items-center">
+                    {canEditProfile && (
+                      <Button asChild variant="outline" className="mb-2 w-full">
+                        <Link href="/settings">
+                          <span><i className="fas fa-cog mr-2"></i>Edit Profile</span>
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="bg-neutral-100 p-3 rounded-md text-center">
                       <div className="text-xl font-medium">{user.streak || 0}</div>

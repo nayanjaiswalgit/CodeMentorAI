@@ -16,8 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardTitle, CardFooter, CardHeader } from "@/components/ui/card";
-import GenerateQuestionsDialog from "@/components/tests/GenerateQuestionsDialog";
-import GenerateQuestionsFromPdfDialog from "@/components/tests/GenerateQuestionsFromPdfDialog";
 
 interface Test {
   id: number;
@@ -47,7 +45,6 @@ export default function Tests() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
-  const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
   
   // Fetch tests data
   const { data: tests, isLoading: testsLoading } = useQuery<Test[]>({
@@ -198,31 +195,7 @@ export default function Tests() {
             </Select>
           </div>
           
-          <div className="flex gap-2 mb-6">
-            <GenerateQuestionsDialog onQuestionsGenerated={setGeneratedQuestions} />
-            <GenerateQuestionsFromPdfDialog onQuestionsGenerated={setGeneratedQuestions} />
-          </div>
-          {generatedQuestions.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-xl font-bold mb-2">AI Generated Questions</h2>
-              <div className="space-y-4">
-                {generatedQuestions.map((q, i) => (
-                  <div key={i} className="p-4 border rounded bg-white">
-                    <div className="font-semibold">Q{i + 1}: {q.question}</div>
-                    {q.options && (
-                      <ul className="list-disc ml-6">
-                        {q.options.map((opt: string, idx: number) => (
-                          <li key={idx}>{opt}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {q.answer && <div className="mt-1 text-green-700">Answer: {q.answer}</div>}
-                    {q.explanation && <div className="mt-1 text-neutral-600 text-sm">{q.explanation}</div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Removed question generation dialogs. Use /tests/generate for question generation. */}
           
           {/* Tests Tabs */}
           <Tabs defaultValue="all" className="mb-8">

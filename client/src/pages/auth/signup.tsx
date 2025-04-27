@@ -41,10 +41,10 @@ export default function Signup() {
   const onSubmit = async (data: SignupFormData) => {
     setIsSubmitting(true);
     try {
-      await apiRequest("POST", "/api/auth/signup", data);
-      
+      await apiRequest("POST", "/api/auth/register", data);
+    
       // Invalidate user query to get fresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       
       toast({
         title: "Account created",

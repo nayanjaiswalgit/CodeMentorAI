@@ -12,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { User } from "@/types/user";
+import { UserRole, Permission, hasPermission } from "@/constants/permissions";
 
 interface HeaderProps {
   onOpenSidebar: () => void;
@@ -22,7 +24,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   
-  const { data: user, isLoading } = useQuery({ 
+  const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/auth/me'],
     retry: false
   });
@@ -54,6 +56,9 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
       description: `You searched for: ${searchQuery}`,
     });
   };
+
+  // Example: Only show admin panel link if user is admin
+  const showAdminPanel = user && hasPermission(user.role, Permission.ACCESS_ADMIN_PANEL);
 
   return (
     <header className="bg-white border-b border-neutral-200 py-3 px-4 flex items-center justify-between">
@@ -94,10 +99,10 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary-light flex items-center justify-center text-white font-medium">
-                {user.displayName.charAt(0)}
+                {user?.displayName?.charAt(0) || user?.username?.charAt(0) || "?"}
               </div>
               <span className="ml-2 text-sm font-medium hidden sm:block">
-                {user.displayName}
+                {user?.displayName || user?.username || "User"}
               </span>
               <i className="fas fa-chevron-down text-xs ml-2 text-neutral-500"></i>
             </DropdownMenuTrigger>
@@ -120,6 +125,13 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
                   </div>
                 </Link>
               </DropdownMenuItem>
+              {showAdminPanel && (
+                <DropdownMenuItem asChild>
+                  <a href="/admin">
+                    <i className="fas fa-tools mr-2"></i>Admin Panel
+                  </a>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                 <i className="fas fa-sign-out-alt mr-2"></i>

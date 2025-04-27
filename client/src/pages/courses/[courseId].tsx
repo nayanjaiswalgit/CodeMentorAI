@@ -6,7 +6,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import CourseContent from "@/components/learning/CourseContent";
 import LessonEditor from "@/components/learning/LessonEditor"; // Import the LessonEditor component
 import { Button } from "@/components/ui/button";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import { Loader2 } from "lucide-react";
 
 export default function CourseDetail() {
@@ -51,15 +51,13 @@ export default function CourseDetail() {
           ) : course ? (
             <div>
               <div className="mb-6">
-                <Breadcrumb className="mb-2">
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="/courses">Courses</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href={`/courses/${courseId}`}>{course.title}</BreadcrumbLink>
-                  </BreadcrumbItem>
-                </Breadcrumb>
+                <Breadcrumbs
+                  className="mb-2"
+                  items={[
+                    { label: "Courses", href: "/courses" },
+                    { label: course.title }
+                  ]}
+                />
                 
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                   <div>

@@ -14,11 +14,16 @@ import McqQuizzes from "@/pages/mcq/index";
 import Tests from "@/pages/tests/index";
 import CreateTest from "@/pages/tests/create";
 import TestDetail from "@/pages/tests/[testId]";
+import GenerateQuestionsPage from "@/pages/tests/generate";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import LearningPathsIndex from "@/pages/learning-paths/index";
 import LearningPathsCreate from "@/pages/learning-paths/create";
 import LearningPathsDetail from "@/pages/learning-paths/pathId";
+import SettingsPage from "./pages/settings";
+import Home from "@/pages/home";
+import MyLearning from "@/pages/my-learning";
+import Calendar from "@/pages/calendar";
 
 interface RouteWrapperProps {
   children: React.ReactNode;
@@ -87,6 +92,9 @@ interface AppRoute {
 
 const appRoutes: AppRoute[] = [
   { path: '/', component: Dashboard, auth: 'authenticated' },
+  { path: '/home', component: Home, auth: 'authenticated' },
+  { path: '/my-learning', component: MyLearning, auth: 'authenticated' },
+  { path: '/calendar', component: Calendar, auth: 'authenticated' },
   { path: '/onboarding', component: Onboarding, auth: 'authenticated' },
   { path: '/courses', component: Courses, auth: 'authenticated' },
   { path: '/courses/:courseId', component: CourseDetail, auth: 'authenticated' },
@@ -95,11 +103,13 @@ const appRoutes: AppRoute[] = [
   { path: '/mcq', component: McqQuizzes, auth: 'authenticated' },
   { path: '/tests', component: Tests, auth: 'authenticated' },
   { path: '/tests/create', component: CreateTest, auth: 'authenticated' },
+  { path: '/tests/generate', component: GenerateQuestionsPage, auth: 'authenticated' },
   { path: '/tests/:testId', component: TestDetail, auth: 'authenticated' },
   { path: '/learning-paths', component: LearningPathsIndex, auth: 'authenticated' },
   { path: '/learning-paths/create', component: LearningPathsCreate, auth: 'authenticated' },
   { path: '/learning-paths/:pathId', component: LearningPathsDetail, auth: 'authenticated' },
   { path: '/profile', component: Profile, auth: 'authenticated' },
+  { path: '/settings', component: SettingsPage, auth: 'authenticated' },
   { path: '/login', component: Login, auth: 'unauthenticated' },
   { path: '/signup', component: Signup, auth: 'unauthenticated' },
   // 404 fallback handled below

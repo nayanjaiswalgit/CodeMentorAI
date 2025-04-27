@@ -45,8 +45,8 @@ export interface IStorage {
   // Test operations
   getTests(): Promise<Test[]>;
   getTest(id: number): Promise<Test | undefined>;
-  createTest(test: any): Promise<Test>;
-  createTestAttempt(attempt: any): Promise<TestAttempt>;
+  createTest(testData: any): Promise<Test>;
+  createTestAttempt(attemptData: any): Promise<TestAttempt>;
   getUserTestAttempts(userId: number): Promise<TestAttempt[]>;
 
   // Learning path operations
@@ -60,6 +60,12 @@ export interface IStorage {
   getChallengeAttempts(userId: number, challengeId: number): Promise<UserProgress[]>;
   createUserProgress(progress: InsertUserProgress): Promise<UserProgress>;
   getUserSkillProgress(userId: number): Promise<Record<string, number>>;
+
+  // Question Bank (General Question) Operations
+  getQuestions(): Promise<Mcq[]>;
+  createQuestion(question: InsertMcq): Promise<Mcq>;
+  updateQuestion(id: number, data: Partial<Mcq>): Promise<Mcq | undefined>;
+  deleteQuestion(id: number): Promise<boolean>;
 }
 
 // Test interfaces
@@ -440,6 +446,30 @@ export class MemStorage implements IStorage {
     });
     
     return skillPercentages;
+  }
+
+  // Question Bank (General Question) Operations
+  async getQuestions(): Promise<Mcq[]> {
+    return Array.from(this.mcqs.values());
+  }
+
+  async createQuestion(question: InsertMcq): Promise<Mcq> {
+    const id = this.mcqId++;
+    const mcq: Mcq = { ...question, id };
+    this.mcqs.set(id, mcq);
+    return mcq;
+  }
+
+  async updateQuestion(id: number, data: Partial<Mcq>): Promise<Mcq | undefined> {
+    const mcq = this.mcqs.get(id);
+    if (!mcq) return undefined;
+    const updatedMcq = { ...mcq, ...data };
+    this.mcqs.set(id, updatedMcq);
+    return updatedMcq;
+  }
+
+  async deleteQuestion(id: number): Promise<boolean> {
+    return this.mcqs.delete(id);
   }
 
   // Seed data for demo purposes
