@@ -34,16 +34,17 @@ export default function Login() {
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
     try {
-      await apiRequest("POST", "/api/auth/login", data);
-      
+      const response = await apiRequest("POST", "/api/auth/login", data);
+      // Save token to localStorage
+      if (response.token) {
+        localStorage.setItem("authToken", response.token);
+      }
       // Invalidate user query to get fresh data
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
-      
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
-      
       // Redirect to dashboard
       setLocation("/");
     } catch (error: any) {
